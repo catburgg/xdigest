@@ -7,18 +7,20 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/catburg/miniconda3/envs/xdigest/bin/python</string>
+        <string>/opt/miniconda3/envs/xdigest/bin/python</string>
         <string>/Users/catburg/xdigest/main.py</string>
     </array>
 
     <key>StartCalendarInterval</key>
     <array>
+        <!-- 7 AM -->
         <dict>
             <key>Hour</key>
             <integer>7</integer>
             <key>Minute</key>
             <integer>0</integer>
         </dict>
+        <!-- 7 PM -->
         <dict>
             <key>Hour</key>
             <integer>19</integer>
@@ -28,10 +30,13 @@
     </array>
 
     <key>StandardOutPath</key>
-    <string>/Users/catburg/.xdigest/logs/launchd.out.log</string>
+    <string>/Users/catburg/Library/Logs/xdigest.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/catburg/.xdigest/logs/launchd.err.log</string>
+    <string>/Users/catburg/Library/Logs/xdigest.error.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/catburg/xdigest</string>
 
     <key>RunAtLoad</key>
     <false/>
@@ -39,7 +44,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/catburg/miniconda3/envs/xdigest/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>/opt/miniconda3/envs/xdigest/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
 </dict>
 </plist>
