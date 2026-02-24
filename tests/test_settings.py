@@ -85,6 +85,13 @@ class TestSettingsLoading:
     def test_empty_follow_accounts_raises_error(self):
         """Test that empty FOLLOW_ACCOUNTS raises ValueError."""
         env = {**VALID_ENV, 'FOLLOW_ACCOUNTS': ''}
-        SettingsClass = _make_settings_no_keychain(env)
-        with pytest.raises(ValueError, match="FOLLOW_ACCOUNTS"):
-            SettingsClass()
+
+        for mod_name in list(sys.modules):
+            if mod_name.startswith('config'):
+                del sys.modules[mod_name]
+
+        with patch.dict(os.environ, env, clear=False):
+            with patch('keyring.get_password', return_value=None):
+                from config.settings import Settings
+                with pytest.raises(ValueError, match="FOLLOW_ACCOUNTS"):
+                    Settings()
