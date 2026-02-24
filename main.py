@@ -15,7 +15,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from config.settings import settings
+from config.settings import get_settings
 from storage.db import Database
 
 
@@ -43,6 +43,8 @@ def main():
     logger.info("=" * 60)
 
     try:
+        settings = get_settings()
+
         # Initialize database
         db = Database(settings.db_path)
         logger.info(f"Database initialized: {settings.db_path}")

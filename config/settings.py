@@ -84,5 +84,13 @@ class Settings:
             raise ValueError("Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
 
 
-# Global settings instance
-settings = Settings()
+# Lazy-loaded global settings instance
+_settings = None
+
+
+def get_settings() -> Settings:
+    """Get or create the global settings instance."""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
