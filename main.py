@@ -18,7 +18,7 @@ import sys
 import asyncio
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from config.settings import get_settings
 from storage.db import Database
@@ -58,12 +58,14 @@ async def run_login(settings, db, use_cdp=False):
 
 async def run_digest(settings, db, logger, use_cdp=False):
     """Run the full digest pipeline."""
-    # Get last sent timestamp
+    # Get last sent timestamp, default to 24 hours ago
     last_sent = db.get_last_sent_timestamp()
     if last_sent:
         logger.info(f"Last digest sent: {last_sent}")
     else:
-        logger.info("No previous digest found (first run)")
+        # First run: only get posts from last 24 hours
+        last_sent = datetime.now(timezone.utc) - timedelta(hours=24)
+        logger.info(f"No previous digest found (first run), fetching posts from last 24 hours")
 
     # Phase 2: Scrape X posts
     scraper = XScraper(
@@ -96,13 +98,31 @@ async def run_digest(settings, db, logger, use_cdp=False):
     enriched_posts = []
 
     for post in posts:
+        # Parse timestamp if available
+        timestamp_str = ''
+        if post.post_timestamp:
+            try:
+                dt = datetime.fromisoformat(post.post_timestamp.replace('Z', '+00:00'))
+                timestamp_str = dt.strftime('%B %d, %Y at %I:%M %p')
+            except Exception:
+                timestamp_str = post.post_timestamp
+
+        # Determine media type
+        media_type = None
+        if post.has_video:
+            media_type = 'video'
+        elif post.has_image:
+            media_type = 'image'
+        elif post.has_link:
+            media_type = 'link'
+
         post_data = {
             'account': post.account,
-            'timestamp': post.timestamp.strftime('%B %d, %Y at %I:%M %p') if post.timestamp else '',
+            'timestamp': timestamp_str,
             'content': post.content,
             'post_url': f"https://x.com/{post.account}/status/{post.post_id}" if post.post_id else '',
             'urls': post.urls,
-            'media_type': post.media_type,
+            'media_type': media_type,
             'article_text': '',
             'video_transcript': '',
             'image_bytes': None,
