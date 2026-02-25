@@ -134,7 +134,7 @@ async def run_digest(settings, db, logger, use_cdp=False):
                     break  # Use first successful article
 
         # Process videos
-        if post.media_type == 'video' and post.urls:
+        if media_type == 'video' and post.urls:
             for url in post.urls:
                 video_info = process_video(url)
                 if video_info:
