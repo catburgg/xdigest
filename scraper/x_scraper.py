@@ -64,35 +64,65 @@ class XScraper:
         self._page = None
 
     async def _launch_browser(self, playwright, headless: bool = None):
-        """Launch browser with stealth mode."""
+        """Launch browser with stealth mode using persistent context."""
         use_headless = headless if headless is not None else self.headless
 
-        self._browser = await playwright.chromium.launch(
-            headless=use_headless,
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--no-sandbox',
-            ]
-        )
+        # Use persistent context to save full browser profile (not just cookies)
+        # This makes X trust the browser more
+        if self.browser_data_path:
+            self._context = await playwright.chromium.launch_persistent_context(
+                user_data_dir=self.browser_data_path,
+                headless=use_headless,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                ],
+                viewport={'width': 1280, 'height': 800},
+                user_agent=(
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/131.0.0.0 Safari/537.36'
+                ),
+                locale='en-US',
+            )
+            self._page = self._context.pages[0] if self._context.pages else await self._context.new_page()
+        else:
+            # Fallback to regular browser if no data path
+            self._browser = await playwright.chromium.launch(
+                headless=use_headless,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--no-sandbox',
+                ]
+            )
 
-        self._context = await self._browser.new_context(
-            viewport={'width': 1280, 'height': 800},
-            user_agent=(
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/131.0.0.0 Safari/537.36'
-            ),
-            locale='en-US',
-        )
+            self._context = await self._browser.new_context(
+                viewport={'width': 1280, 'height': 800},
+                user_agent=(
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/131.0.0.0 Safari/537.36'
+                ),
+                locale='en-US',
+            )
+            self._page = await self._context.new_page()
 
-        self._page = await self._context.new_page()
         stealth = Stealth()
         await stealth.apply_stealth_async(self._page)
 
         return self._page
 
     async def _restore_cookies(self) -> bool:
-        """Restore saved session cookies. Returns True if cookies were loaded."""
+        """Restore saved session cookies. Returns True if cookies were loaded.
+
+        Note: With persistent context, cookies are automatically saved/restored.
+        This method is kept for backward compatibility.
+        """
+        if self.browser_data_path:
+            # Persistent context handles cookies automatically
+            return True
+
         cookies = self.db.get_session_cookies()
         if cookies:
             await self._context.add_cookies(cookies)
@@ -101,7 +131,16 @@ class XScraper:
         return False
 
     async def _save_cookies(self):
-        """Save current session cookies to database."""
+        """Save current session cookies to database.
+
+        Note: With persistent context, cookies are automatically saved.
+        This method is kept for backward compatibility.
+        """
+        if self.browser_data_path:
+            # Persistent context handles cookies automatically
+            logger.info("Cookies saved automatically via persistent context")
+            return
+
         cookies = await self._context.cookies()
         self.db.save_session_cookies(cookies)
         logger.info(f"Saved {len(cookies)} session cookies")
@@ -185,7 +224,11 @@ class XScraper:
                 print("\n✗ Login timed out after 5 minutes.")
                 logger.error("Manual login timed out")
 
-            await self._browser.close()
+            # Close browser or context
+            if self._browser:
+                await self._browser.close()
+            elif self._context:
+                await self._context.close()
 
     async def scrape_accounts(
         self, accounts: List[str], since: Optional[datetime] = None
@@ -208,13 +251,19 @@ class XScraper:
             has_cookies = await self._restore_cookies()
             if not has_cookies:
                 logger.error("No session cookies found. Run with --login first.")
-                await self._browser.close()
+                if self._browser:
+                    await self._browser.close()
+                elif self._context:
+                    await self._context.close()
                 return []
 
             # Verify login
             if not await self._is_logged_in():
                 logger.error("Session expired. Run with --login to re-authenticate.")
-                await self._browser.close()
+                if self._browser:
+                    await self._browser.close()
+                elif self._context:
+                    await self._context.close()
                 return []
 
             logger.info("Session valid, starting scrape...")
@@ -236,7 +285,10 @@ class XScraper:
 
             # Save updated cookies
             await self._save_cookies()
-            await self._browser.close()
+            if self._browser:
+                await self._browser.close()
+            elif self._context:
+                await self._context.close()
 
         return all_posts
 
