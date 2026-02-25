@@ -558,8 +558,8 @@ class XScraper:
                 # Navigate to following page
                 following_url = f"{X_BASE_URL}/{username}/following"
                 logger.info(f"Navigating to {following_url}")
-                await page.goto(following_url, wait_until='networkidle', timeout=30000)
-                await asyncio.sleep(3)
+                await page.goto(following_url, wait_until='domcontentloaded', timeout=60000)
+                await asyncio.sleep(5)  # Wait for content to load
 
                 # Scroll and collect accounts
                 last_count = 0
