@@ -4,7 +4,7 @@ Provides two levels of summarization:
 1. Per-post summary — 2-3 sentences covering key news/insight
 2. Digest overview — 3-5 sentence summary of key themes across all posts
 
-Uses Google Gemini 2.0 Flash (experimental) for fast, cheap, multimodal summarization.
+Uses Google Gemini 3.0 Flash for fast, cheap, multimodal summarization.
 """
 
 import time
@@ -16,7 +16,7 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = 'models/gemini-2.0-flash-exp'  # Gemini 2.0 experimental
+MODEL_NAME = 'models/gemini-3.0-flash'  # Gemini 3.0 Flash
 API_DELAY = 1  # seconds between API calls (courtesy rate limiting)
 
 POST_SUMMARY_PROMPT = """Summarize this social media post and any linked content into 2-3 concise sentences.
