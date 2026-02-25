@@ -568,11 +568,22 @@ class XScraper:
 
                 for scroll in range(max_scrolls):
                     # Find all account cells (each following entry)
-                    # Look for divs with data-testid="UserCell" or spans with @username
+                    # Use more specific selector to avoid "Who to follow" suggestions
+                    # The main timeline should contain the following list
                     account_elements = await page.query_selector_all('[data-testid="UserCell"]')
 
                     for element in account_elements:
                         try:
+                            # Check if this is a "Who to follow" suggestion by looking for "Follow" button
+                            # Following list entries should have "Following" button, not "Follow"
+                            follow_button = await element.query_selector('[data-testid*="follow"]')
+                            if follow_button:
+                                button_text = await follow_button.inner_text()
+                                # Skip if it's a "Follow" button (suggestion), only keep "Following" (actual following)
+                                if button_text and 'Following' not in button_text:
+                                    logger.debug(f"Skipping suggested account (has Follow button)")
+                                    continue
+
                             # Try to find the username link within the cell
                             username_link = await element.query_selector('a[href^="/"][role="link"]')
                             if username_link:
@@ -589,7 +600,7 @@ class XScraper:
                                         not account.startswith('notifications') and
                                         not account.startswith('messages')):
                                         following.append(account)
-                                        logger.debug(f"Found account: @{account}")
+                                        logger.debug(f"Found following account: @{account}")
                         except Exception as e:
                             logger.debug(f"Error parsing account element: {e}")
                             continue
