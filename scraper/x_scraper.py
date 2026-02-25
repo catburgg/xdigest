@@ -394,16 +394,11 @@ class XScraper:
                     continue
 
                 if post.post_id in seen_ids:
-                    logger.debug(f"Already seen post {post.post_id}")
+                    logger.debug(f"Already seen post {post.post_id} in this scrape session")
                     continue
 
                 seen_ids.add(post.post_id)
                 logger.debug(f"Found post {post.post_id}, timestamp: {post.post_timestamp}")
-
-                # Skip if already in database
-                if self.db.post_exists(post.post_id):
-                    logger.debug(f"Post {post.post_id} already in database")
-                    continue
 
                 # Check timestamp cutoff
                 if since and post.post_timestamp:

@@ -58,14 +58,10 @@ async def run_login(settings, db, use_cdp=False):
 
 async def run_digest(settings, db, logger, use_cdp=False):
     """Run the full digest pipeline."""
-    # Get last sent timestamp, default to 24 hours ago
-    last_sent = db.get_last_sent_timestamp()
-    if last_sent:
-        logger.info(f"Last digest sent: {last_sent}")
-    else:
-        # First run: only get posts from last 24 hours
-        last_sent = datetime.now(timezone.utc) - timedelta(hours=24)
-        logger.info(f"No previous digest found (first run), fetching posts from last 24 hours")
+    # Always fetch posts from last 24 hours (not incremental)
+    # This ensures users don't miss content if they skip an email
+    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    logger.info(f"Fetching posts from last 24 hours (since {since})")
 
     # Phase 2: Scrape X posts
     scraper = XScraper(
@@ -76,7 +72,7 @@ async def run_digest(settings, db, logger, use_cdp=False):
     )
 
     logger.info(f"Scraping {len(settings.follow_accounts)} accounts: {', '.join(settings.follow_accounts)}")
-    posts = await scraper.scrape_accounts(settings.follow_accounts, since=last_sent)
+    posts = await scraper.scrape_accounts(settings.follow_accounts, since=since)
     logger.info(f"Scraped {len(posts)} new posts total")
 
     if not posts:
@@ -183,13 +179,13 @@ async def run_digest(settings, db, logger, use_cdp=False):
 
     if success:
         logger.info(f"Email digest sent successfully to {settings.to_email}")
-        # Update last sent timestamp only on successful send
+        # Update last sent timestamp for tracking
         db.set_last_sent_timestamp(datetime.now())
 
-        # Clean up old data to keep database small
-        deleted_posts = db.cleanup_old_posts(keep_days=7)
-        deleted_digests = db.cleanup_old_digests(keep_count=10)
-        logger.info(f"Cleaned up {deleted_posts} old posts and {deleted_digests} old digests")
+        # Clean up all old data (we don't need it for deduplication anymore)
+        deleted_posts = db.cleanup_old_posts(keep_days=0)  # Delete all posts
+        deleted_digests = db.cleanup_old_digests(keep_count=5)  # Keep only last 5 for history
+        logger.info(f"Cleaned up {deleted_posts} posts and {deleted_digests} old digests")
     else:
         logger.error("Failed to send email digest")
         return
