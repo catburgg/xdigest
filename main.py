@@ -185,6 +185,11 @@ async def run_digest(settings, db, logger, use_cdp=False):
         logger.info(f"Email digest sent successfully to {settings.to_email}")
         # Update last sent timestamp only on successful send
         db.set_last_sent_timestamp(datetime.now())
+
+        # Clean up old data to keep database small
+        deleted_posts = db.cleanup_old_posts(keep_days=7)
+        deleted_digests = db.cleanup_old_digests(keep_count=10)
+        logger.info(f"Cleaned up {deleted_posts} old posts and {deleted_digests} old digests")
     else:
         logger.error("Failed to send email digest")
         return

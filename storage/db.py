@@ -242,3 +242,47 @@ class Database:
         conn.close()
 
         return posts
+
+    def cleanup_old_posts(self, keep_days: int = 7):
+        """Clean up old posts from database, keeping only recent ones for deduplication.
+
+        Args:
+            keep_days: Number of days of posts to keep (default: 7)
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM posts
+            WHERE scraped_at < datetime('now', '-' || ? || ' days')
+        """, (keep_days,))
+
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        return deleted
+
+    def cleanup_old_digests(self, keep_count: int = 10):
+        """Clean up old digest records, keeping only the most recent ones.
+
+        Args:
+            keep_count: Number of recent digests to keep (default: 10)
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            DELETE FROM digests
+            WHERE id NOT IN (
+                SELECT id FROM digests
+                ORDER BY sent_at DESC
+                LIMIT ?
+            )
+        """, (keep_count,))
+
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        return deleted
