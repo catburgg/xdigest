@@ -21,10 +21,12 @@ class Database:
         """Initialize database connection.
 
         Args:
-            db_path: Path to SQLite database file
+            db_path: Path to SQLite database file (or ':memory:' for in-memory DB)
         """
         self.db_path = db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Only create directory if not using in-memory database
+        if db_path != ':memory:' and isinstance(db_path, Path):
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
