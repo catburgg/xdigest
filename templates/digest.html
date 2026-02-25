@@ -38,14 +38,6 @@
             color: #1da1f2;
             font-size: 1.2em;
         }
-        .overview-en {
-            margin-bottom: 10px;
-        }
-        .overview-zh {
-            color: #14171a;
-            border-top: 1px solid #e1e8ed;
-            padding-top: 10px;
-        }
         .post {
             margin-bottom: 30px;
             padding-bottom: 20px;
@@ -74,15 +66,6 @@
             padding: 12px;
             border-radius: 4px;
             margin-bottom: 12px;
-        }
-        .summary-en {
-            font-style: italic;
-            margin-bottom: 8px;
-        }
-        .summary-zh {
-            color: #14171a;
-            border-top: 1px solid #d0e8f7;
-            padding-top: 8px;
         }
         .links {
             margin-top: 10px;
@@ -122,13 +105,9 @@
         {% if overview %}
         <div class="overview">
             <h2>Key Themes</h2>
-            {% if overview_en %}
-            <div class="overview-en">{{ overview_en }}</div>
-            {% endif %}
             {% if overview_zh %}
-            <div class="overview-zh">{{ overview_zh }}</div>
-            {% endif %}
-            {% if not overview_en and not overview_zh %}
+            <p>{{ overview_zh }}</p>
+            {% else %}
             <p>{{ overview }}</p>
             {% endif %}
         </div>
@@ -154,14 +133,10 @@
             {% if post.summary %}
             <div class="summary">
                 <strong>Summary:</strong>
-                {% if post.summary_en %}
-                <div class="summary-en">{{ post.summary_en }}</div>
-                {% endif %}
                 {% if post.summary_zh %}
-                <div class="summary-zh">{{ post.summary_zh }}</div>
-                {% endif %}
-                {% if not post.summary_en and not post.summary_zh %}
-                <div class="summary-en">{{ post.summary }}</div>
+                <div>{{ post.summary_zh }}</div>
+                {% else %}
+                <div>{{ post.summary }}</div>
                 {% endif %}
             </div>
             {% endif %}
