@@ -78,9 +78,15 @@ class TestSettingsLoading:
 
     def test_missing_keychain_raises_error(self):
         """Test that missing Keychain credentials raise ValueError."""
-        SettingsClass = _make_settings_no_keychain(VALID_ENV)
-        with pytest.raises(ValueError, match="Configuration errors"):
-            SettingsClass()
+        for mod_name in list(sys.modules):
+            if mod_name.startswith('config'):
+                del sys.modules[mod_name]
+
+        with patch.dict(os.environ, VALID_ENV, clear=False):
+            with patch('keyring.get_password', return_value=None):
+                from config.settings import Settings
+                with pytest.raises(ValueError, match="Configuration errors"):
+                    Settings()
 
     def test_empty_follow_accounts_raises_error(self):
         """Test that empty FOLLOW_ACCOUNTS raises ValueError."""

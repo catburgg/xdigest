@@ -74,6 +74,7 @@ class TestRunLogin:
             db=mock_db,
             headless=False,
             browser_data_path=str(mock_settings.browser_data_path),
+            use_cdp=False,
         )
         mock_scraper.manual_login.assert_called_once()
 
