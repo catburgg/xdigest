@@ -119,19 +119,23 @@ Check your email (and spam folder) for the digest!
 To run automatically at 7 AM and 7 PM daily:
 
 ```bash
-# Install the launchd plist
+# Install the scheduler
 ./install_scheduler.sh
 
 # Verify it's loaded
 launchctl list | grep xdigest
+
+# View logs
+tail -f logs/scheduler.log
 ```
 
 To uninstall:
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.xdigest.plist
-rm ~/Library/LaunchAgents/com.xdigest.plist
+./uninstall_scheduler.sh
 ```
+
+**Important:** Make sure Chrome with CDP mode is running before the scheduled time, or the script will fail to scrape posts.
 
 ## Configuration
 
@@ -288,20 +292,29 @@ SELECT * FROM state WHERE key = 'last_sent_timestamp';
 # Check if launchd job is loaded
 launchctl list | grep xdigest
 
-# View launchd logs
-tail -f ~/Library/Logs/xdigest.log
+# View scheduler logs
+tail -f logs/scheduler.log
+tail -f logs/scheduler.error.log
 
 # Reload the job
-launchctl unload ~/Library/LaunchAgents/com.xdigest.plist
-launchctl load ~/Library/LaunchAgents/com.xdigest.plist
+./uninstall_scheduler.sh
+./install_scheduler.sh
 ```
+
+**Problem:** Chrome CDP not available during scheduled run
+
+**Solution:** You need to keep Chrome running with CDP mode enabled. Consider:
+1. Adding Chrome to Login Items (System Preferences → Users & Groups → Login Items)
+2. Creating a startup script to launch Chrome with CDP mode
+3. Or manually start Chrome before scheduled times (7 AM and 7 PM)
 
 **Problem:** Wrong Python environment used
 
-**Solution:** Edit `com.xdigest.plist` and update the Python path to your conda environment:
+**Solution:** The scheduler uses the system Python. Make sure all dependencies are installed:
 ```bash
-which python  # Run this in your activated conda env
-# Copy the path and update it in the plist file
+# Use system Python or update plist with conda Python path
+which python3
+# Update the path in com.xdigest.scheduler.plist if needed
 ```
 
 ## Development

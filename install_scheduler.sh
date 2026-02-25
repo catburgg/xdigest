@@ -1,73 +1,58 @@
 #!/bin/bash
+
 # XDigest Scheduler Installation Script
-# Installs launchd job to run XDigest at 7 AM and 7 PM daily
+# This script sets up automatic email delivery at 7 AM and 7 PM daily
 
 set -e
 
-echo "==================================="
-echo "XDigest Scheduler Installation"
-echo "==================================="
-echo ""
-
-# Get the current directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_DIR="$SCRIPT_DIR"
+PLIST_FILE="$SCRIPT_DIR/com.xdigest.scheduler.plist"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
+INSTALLED_PLIST="$LAUNCH_AGENTS_DIR/com.xdigest.scheduler.plist"
+LOG_DIR="$SCRIPT_DIR/logs"
 
-# Get Python path from current environment
-PYTHON_PATH=$(which python)
-if [ -z "$PYTHON_PATH" ]; then
-    echo "Error: Python not found. Please activate your conda environment first:"
-    echo "  conda activate xdigest"
-    exit 1
-fi
-
-echo "Using Python: $PYTHON_PATH"
-echo "Project directory: $PROJECT_DIR"
+echo "=== XDigest Scheduler Installation ==="
 echo ""
 
-# Create a temporary plist with correct paths
-PLIST_TEMPLATE="$PROJECT_DIR/scheduler/com.xdigest.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.xdigest.plist"
-
-if [ ! -f "$PLIST_TEMPLATE" ]; then
-    echo "Error: Template plist not found at $PLIST_TEMPLATE"
-    exit 1
+# Create logs directory
+if [ ! -d "$LOG_DIR" ]; then
+    echo "Creating logs directory..."
+    mkdir -p "$LOG_DIR"
 fi
 
-# Replace paths in plist
-echo "Creating launchd plist with your paths..."
-sed -e "s|/opt/miniconda3/envs/xdigest/bin/python|$PYTHON_PATH|g" \
-    -e "s|/Users/catburg/xdigest|$PROJECT_DIR|g" \
-    -e "s|/Users/catburg/Library/Logs|$HOME/Library/Logs|g" \
-    "$PLIST_TEMPLATE" > "$PLIST_DEST"
-
-echo "✓ Created plist at $PLIST_DEST"
-echo ""
-
-# Load the launchd job
-echo "Loading launchd job..."
-launchctl unload "$PLIST_DEST" 2>/dev/null || true
-launchctl load "$PLIST_DEST"
-
-echo "✓ Launchd job loaded"
-echo ""
-
-# Verify
-if launchctl list | grep -q "com.xdigest"; then
-    echo "✓ Installation successful!"
-    echo ""
-    echo "XDigest will now run automatically at:"
-    echo "  - 7:00 AM daily"
-    echo "  - 7:00 PM daily"
-    echo ""
-    echo "Logs will be written to:"
-    echo "  - $HOME/Library/Logs/xdigest.log"
-    echo "  - $HOME/Library/Logs/xdigest.error.log"
-    echo ""
-    echo "To uninstall:"
-    echo "  launchctl unload $PLIST_DEST"
-    echo "  rm $PLIST_DEST"
-else
-    echo "✗ Installation failed. Check the error messages above."
-    exit 1
+# Create LaunchAgents directory if it doesn't exist
+if [ ! -d "$LAUNCH_AGENTS_DIR" ]; then
+    echo "Creating LaunchAgents directory..."
+    mkdir -p "$LAUNCH_AGENTS_DIR"
 fi
+
+# Unload existing service if running
+if launchctl list | grep -q "com.xdigest.scheduler"; then
+    echo "Stopping existing scheduler..."
+    launchctl unload "$INSTALLED_PLIST" 2>/dev/null || true
+fi
+
+# Copy plist file
+echo "Installing scheduler configuration..."
+cp "$PLIST_FILE" "$INSTALLED_PLIST"
+
+# Load the service
+echo "Starting scheduler..."
+launchctl load "$INSTALLED_PLIST"
+
+echo ""
+echo "✓ Scheduler installed successfully!"
+echo ""
+echo "Schedule:"
+echo "  - Every day at 7:00 AM"
+echo "  - Every day at 7:00 PM (19:00)"
+echo ""
+echo "Logs location:"
+echo "  - Output: $LOG_DIR/scheduler.log"
+echo "  - Errors: $LOG_DIR/scheduler.error.log"
+echo ""
+echo "Useful commands:"
+echo "  - Check status: launchctl list | grep xdigest"
+echo "  - View logs: tail -f $LOG_DIR/scheduler.log"
+echo "  - Uninstall: ./uninstall_scheduler.sh"
+echo ""
