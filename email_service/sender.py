@@ -72,6 +72,16 @@ class EmailSender:
 
         template = self.jinja_env.get_template('digest.html')
 
+        # Split overview into English and Chinese
+        overview_en, overview_zh = self._split_translation(overview)
+
+        # Split post summaries into English and Chinese
+        for post in posts:
+            if 'summary' in post:
+                summary_en, summary_zh = self._split_translation(post['summary'])
+                post['summary_en'] = summary_en
+                post['summary_zh'] = summary_zh
+
         # Calculate stats
         account_count = len(set(p.get('account', '') for p in posts))
         post_count = len(posts)
@@ -79,10 +89,26 @@ class EmailSender:
         return template.render(
             posts=posts,
             overview=overview,
+            overview_en=overview_en,
+            overview_zh=overview_zh,
             date=date,
             account_count=account_count,
             post_count=post_count,
         )
+
+    def _split_translation(self, text: str) -> tuple[str, str]:
+        """Split text into English and Chinese parts.
+
+        Args:
+            text: Text that may contain "中文：" separator
+
+        Returns:
+            Tuple of (english_text, chinese_text)
+        """
+        if '中文：' in text:
+            parts = text.split('中文：', 1)
+            return parts[0].strip(), parts[1].strip()
+        return text, ""
 
     def send_digest(
         self,

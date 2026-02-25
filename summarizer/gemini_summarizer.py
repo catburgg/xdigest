@@ -21,6 +21,7 @@ API_DELAY = 1  # seconds between API calls (courtesy rate limiting)
 
 POST_SUMMARY_PROMPT = """Summarize this social media post and any linked content into 2-3 concise sentences.
 Focus on key news, facts, and insights. Be specific and informative.
+After the summary, provide a Chinese translation on a new line starting with "中文：".
 
 Post by @{account}:
 {post_text}
@@ -29,6 +30,7 @@ Post by @{account}:
 
 DIGEST_OVERVIEW_PROMPT = """Write a brief 3-5 sentence overview of the key themes and most important news items
 from the following post summaries. Highlight the most significant developments.
+After the overview, provide a Chinese translation on a new line starting with "中文：".
 
 {summaries}"""
 

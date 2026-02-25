@@ -58,10 +58,10 @@ async def run_login(settings, db, use_cdp=False):
 
 async def run_digest(settings, db, logger, use_cdp=False):
     """Run the full digest pipeline."""
-    # Always fetch posts from last 24 hours (not incremental)
+    # Always fetch posts from last 12 hours (not incremental)
     # This ensures users don't miss content if they skip an email
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
-    logger.info(f"Fetching posts from last 24 hours (since {since})")
+    since = datetime.now(timezone.utc) - timedelta(hours=12)
+    logger.info(f"Fetching posts from last 12 hours (since {since})")
 
     # Phase 2: Scrape X posts
     scraper = XScraper(
