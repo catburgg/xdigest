@@ -567,16 +567,32 @@ class XScraper:
                 max_scrolls = 20
 
                 for scroll in range(max_scrolls):
-                    # Find all account links
-                    account_links = await page.query_selector_all('a[href^="/"][role="link"]')
+                    # Find all account cells (each following entry)
+                    # Look for divs with data-testid="UserCell" or spans with @username
+                    account_elements = await page.query_selector_all('[data-testid="UserCell"]')
 
-                    for link in account_links:
-                        href = await link.get_attribute('href')
-                        if href and href.startswith('/') and '/' not in href[1:]:
-                            # Simple username link like "/elonmusk"
-                            account = href.strip('/')
-                            if account and account not in following and not account.startswith('i/'):
-                                following.append(account)
+                    for element in account_elements:
+                        try:
+                            # Try to find the username link within the cell
+                            username_link = await element.query_selector('a[href^="/"][role="link"]')
+                            if username_link:
+                                href = await username_link.get_attribute('href')
+                                if href and href.startswith('/'):
+                                    # Extract username from href like "/username"
+                                    account = href.strip('/').split('/')[0]
+                                    # Filter out non-username paths
+                                    if (account and
+                                        account not in following and
+                                        not account.startswith('i/') and
+                                        not account.startswith('search') and
+                                        not account.startswith('explore') and
+                                        not account.startswith('notifications') and
+                                        not account.startswith('messages')):
+                                        following.append(account)
+                                        logger.debug(f"Found account: @{account}")
+                        except Exception as e:
+                            logger.debug(f"Error parsing account element: {e}")
+                            continue
 
                     current_count = len(following)
                     logger.info(f"Scroll {scroll + 1}/{max_scrolls}: Found {current_count} accounts")
