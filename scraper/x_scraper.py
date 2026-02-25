@@ -523,18 +523,28 @@ class XScraper:
                 page = await self._launch_browser(p, headless=False)
                 logger.info("Browser launched successfully")
 
-                # Navigate to following page
-                # We need to get the current user's username first
-                logger.info(f"Navigating to {HOME_URL}")
-                await page.goto(HOME_URL, wait_until='networkidle', timeout=30000)
-                await asyncio.sleep(2)
-                logger.info("Loaded home page")
+                # Get current URL to check if already on X
+                current_url = page.url
+                logger.info(f"Current page: {current_url}")
+
+                # If not on X, navigate to home
+                if 'x.com' not in current_url and 'twitter.com' not in current_url:
+                    logger.info(f"Navigating to {HOME_URL}")
+                    await page.goto(HOME_URL, wait_until='domcontentloaded', timeout=60000)
+                    await asyncio.sleep(3)
+                else:
+                    logger.info("Already on X, skipping navigation")
+                    await asyncio.sleep(1)
 
                 # Try to find the user's profile link
                 profile_link = await page.query_selector('a[data-testid="AppTabBar_Profile_Link"]')
                 if not profile_link:
                     logger.error("Could not find profile link. Make sure you're logged in.")
-                    return []
+                    # Try alternative selector
+                    profile_link = await page.query_selector('a[href*="/"][aria-label*="Profile"]')
+                    if not profile_link:
+                        logger.error("Could not find profile link with alternative selector either.")
+                        return []
 
                 # Get username from profile link
                 href = await profile_link.get_attribute('href')
@@ -591,6 +601,8 @@ class XScraper:
             except Exception as e:
                 logger.error(f"Error fetching following accounts: {e}")
             finally:
-                await self._close_browser()
+                # In CDP mode, don't close the browser (user is still using it)
+                if not self.use_cdp and self._browser:
+                    await self._browser.close()
 
         return following
