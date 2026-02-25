@@ -381,18 +381,28 @@ class XScraper:
         scroll_attempts = 0
         max_scrolls = 10
 
+        logger.debug(f"Looking for posts since: {since}")
+
         while scroll_attempts < max_scrolls:
             tweet_elements = await self._page.query_selector_all(SELECTORS['tweet'])
+            logger.debug(f"Found {len(tweet_elements)} tweet elements on page")
 
             for tweet_el in tweet_elements:
                 post = await self._parse_tweet(tweet_el, account)
-                if post is None or post.post_id in seen_ids:
+                if post is None:
+                    logger.debug("Failed to parse tweet")
+                    continue
+
+                if post.post_id in seen_ids:
+                    logger.debug(f"Already seen post {post.post_id}")
                     continue
 
                 seen_ids.add(post.post_id)
+                logger.debug(f"Found post {post.post_id}, timestamp: {post.post_timestamp}")
 
                 # Skip if already in database
                 if self.db.post_exists(post.post_id):
+                    logger.debug(f"Post {post.post_id} already in database")
                     continue
 
                 # Check timestamp cutoff
@@ -402,12 +412,16 @@ class XScraper:
                         if post_dt.tzinfo is None:
                             post_dt = post_dt.replace(tzinfo=timezone.utc)
                         since_aware = since if since.tzinfo else since.replace(tzinfo=timezone.utc)
+                        logger.debug(f"Post time: {post_dt}, cutoff: {since_aware}")
                         if post_dt < since_aware:
                             # Reached posts older than cutoff
+                            logger.debug(f"Post {post.post_id} is older than cutoff, stopping")
                             return posts
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as e:
+                        logger.debug(f"Failed to parse timestamp: {e}")
                         pass
 
+                logger.info(f"Adding post {post.post_id} to results")
                 posts.append(post)
 
             # Scroll down to load more
