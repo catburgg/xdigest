@@ -234,12 +234,53 @@ Gemini rate limit (15 RPM):
    sender.send_digest([{'account': 'test', 'content': 'test'}])
    ```
 
-### X login fails
+### X login fails or gets blocked
+
+**Method 1: Standard Login (Persistent Context)**
 
 1. Set `HEADLESS=false` in `.env`
 2. Run `python main.py --login`
 3. Complete CAPTCHA/2FA manually
 4. Set `HEADLESS=true` back
+
+**Method 2: Using Real Chrome (Most Reliable)**
+
+If X blocks the automated login, use your real Chrome browser:
+
+**Step 1: Launch Chrome with Remote Debugging**
+
+```bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/chrome-xdigest"
+```
+
+**Step 2: Log into X Manually**
+
+In the Chrome window that opened, go to x.com and log in normally.
+
+**Step 3: Run XDigest with --use-chrome**
+
+```bash
+conda activate xdigest
+python main.py --use-chrome
+```
+
+The script will connect to your Chrome and use your logged-in session.
+
+**Step 4: Keep Chrome Running**
+
+Leave Chrome open while XDigest runs. You can minimize it.
+
+**Why This Works**
+
+X cannot detect automation because you're using your real Chrome browser with:
+- Your real browsing history
+- Your installed extensions
+- Your normal browser fingerprint
+- Your actual logged-in session
+
+**Note:** You only need to log in once in Chrome. The session persists in the `chrome-xdigest` profile.
 
 ### Scheduler not running
 

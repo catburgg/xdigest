@@ -55,17 +55,38 @@ class Post:
 class XScraper:
     """Scrapes posts from X using Playwright."""
 
-    def __init__(self, db: Database, headless: bool = True, browser_data_path: str = None):
+    def __init__(self, db: Database, headless: bool = True, browser_data_path: str = None,
+                 use_cdp: bool = False, cdp_url: str = "http://localhost:9222"):
         self.db = db
         self.headless = headless
         self.browser_data_path = browser_data_path
+        self.use_cdp = use_cdp
+        self.cdp_url = cdp_url
         self._browser = None
         self._context = None
         self._page = None
 
     async def _launch_browser(self, playwright, headless: bool = None):
-        """Launch browser with stealth mode using persistent context."""
+        """Launch browser with stealth mode, persistent context, or connect via CDP."""
         use_headless = headless if headless is not None else self.headless
+
+        # CDP mode: Connect to existing Chrome instance
+        if self.use_cdp:
+            logger.info(f"Connecting to Chrome via CDP at {self.cdp_url}")
+            self._browser = await playwright.chromium.connect_over_cdp(self.cdp_url)
+
+            # Use existing context and page
+            if self._browser.contexts:
+                self._context = self._browser.contexts[0]
+                if self._context.pages:
+                    self._page = self._context.pages[0]
+                else:
+                    self._page = await self._context.new_page()
+            else:
+                raise Exception("No browser context found in CDP connection")
+
+            logger.info("Connected to existing Chrome browser")
+            return self._page
 
         # Use persistent context to save full browser profile (not just cookies)
         # This makes X trust the browser more
@@ -119,6 +140,11 @@ class XScraper:
         Note: With persistent context, cookies are automatically saved/restored.
         This method is kept for backward compatibility.
         """
+        if self.use_cdp:
+            # CDP uses existing browser session, no need to restore cookies
+            logger.info("CDP mode: using existing browser session")
+            return True
+
         if self.browser_data_path:
             # Persistent context handles cookies automatically
             return True
@@ -136,6 +162,11 @@ class XScraper:
         Note: With persistent context, cookies are automatically saved.
         This method is kept for backward compatibility.
         """
+        if self.use_cdp:
+            # CDP uses existing browser session, no need to save cookies
+            logger.info("CDP mode: cookies managed by Chrome")
+            return
+
         if self.browser_data_path:
             # Persistent context handles cookies automatically
             logger.info("Cookies saved automatically via persistent context")
@@ -175,6 +206,15 @@ class XScraper:
         User completes login (handles CAPTCHA, 2FA, etc).
         Saves session cookies once logged in.
         """
+        if self.use_cdp:
+            print("\n" + "=" * 60)
+            print("  CDP MODE: Using existing Chrome browser")
+            print("  Please ensure you're logged into X in Chrome")
+            print("  Chrome must be running with --remote-debugging-port=9222")
+            print("=" * 60 + "\n")
+            logger.info("CDP mode: skipping manual login (using existing session)")
+            return
+
         async with async_playwright() as p:
             # Always visible for manual login
             await self._launch_browser(p, headless=False)
@@ -196,10 +236,26 @@ class XScraper:
             waited = 0
 
             while waited < max_wait:
-                await self._page.wait_for_timeout(poll_interval * 1000)
+                try:
+                    await self._page.wait_for_timeout(poll_interval * 1000)
+                except Exception as e:
+                    if "closed" in str(e).lower() or "target" in str(e).lower():
+                        print("\n✗ Browser window was closed.")
+                        logger.error("Browser closed during manual login")
+                        return
+                    raise
+
                 waited += poll_interval
 
-                current_url = self._page.url
+                try:
+                    current_url = self._page.url
+                except Exception as e:
+                    if "closed" in str(e).lower():
+                        print("\n✗ Browser window was closed.")
+                        logger.error("Browser closed during manual login")
+                        return
+                    raise
+
                 # Check if we've left the login flow
                 if '/home' in current_url or (
                     '/login' not in current_url
@@ -224,11 +280,14 @@ class XScraper:
                 print("\n✗ Login timed out after 5 minutes.")
                 logger.error("Manual login timed out")
 
-            # Close browser or context
-            if self._browser:
-                await self._browser.close()
-            elif self._context:
-                await self._context.close()
+            # Close browser or context safely
+            try:
+                if self._browser:
+                    await self._browser.close()
+                elif self._context:
+                    await self._context.close()
+            except Exception as e:
+                logger.debug(f"Context already closed: {e}")
 
     async def scrape_accounts(
         self, accounts: List[str], since: Optional[datetime] = None

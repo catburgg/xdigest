@@ -45,17 +45,18 @@ def setup_logging(log_path):
     return logging.getLogger(__name__)
 
 
-async def run_login(settings, db):
+async def run_login(settings, db, use_cdp=False):
     """Run manual login flow."""
     scraper = XScraper(
         db=db,
         headless=False,
         browser_data_path=str(settings.browser_data_path),
+        use_cdp=use_cdp,
     )
     await scraper.manual_login()
 
 
-async def run_digest(settings, db, logger):
+async def run_digest(settings, db, logger, use_cdp=False):
     """Run the full digest pipeline."""
     # Get last sent timestamp
     last_sent = db.get_last_sent_timestamp()
@@ -69,6 +70,7 @@ async def run_digest(settings, db, logger):
         db=db,
         headless=settings.headless,
         browser_data_path=str(settings.browser_data_path),
+        use_cdp=use_cdp,
     )
 
     logger.info(f"Scraping {len(settings.follow_accounts)} accounts: {', '.join(settings.follow_accounts)}")
@@ -175,6 +177,8 @@ def main():
     parser = argparse.ArgumentParser(description='XDigest - X News Digest')
     parser.add_argument('--login', action='store_true',
                         help='Open browser for manual X login')
+    parser.add_argument('--use-chrome', action='store_true',
+                        help='Connect to existing Chrome browser (requires Chrome running with --remote-debugging-port=9222)')
     args = parser.parse_args()
 
     settings = get_settings()
@@ -190,9 +194,9 @@ def main():
 
         if args.login:
             logger.info("Starting manual login flow...")
-            asyncio.run(run_login(settings, db))
+            asyncio.run(run_login(settings, db, use_cdp=args.use_chrome))
         else:
-            asyncio.run(run_digest(settings, db, logger))
+            asyncio.run(run_digest(settings, db, logger, use_cdp=args.use_chrome))
 
     except Exception as e:
         logger.error(f"Error during execution: {e}", exc_info=True)
