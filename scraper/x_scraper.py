@@ -521,11 +521,14 @@ class XScraper:
         async with async_playwright() as p:
             try:
                 page = await self._launch_browser(p, headless=False)
+                logger.info("Browser launched successfully")
 
                 # Navigate to following page
                 # We need to get the current user's username first
+                logger.info(f"Navigating to {HOME_URL}")
                 await page.goto(HOME_URL, wait_until='networkidle', timeout=30000)
                 await asyncio.sleep(2)
+                logger.info("Loaded home page")
 
                 # Try to find the user's profile link
                 profile_link = await page.query_selector('a[data-testid="AppTabBar_Profile_Link"]')
@@ -536,6 +539,7 @@ class XScraper:
                 # Get username from profile link
                 href = await profile_link.get_attribute('href')
                 username = href.strip('/') if href else None
+                logger.info(f"Found username: {username}")
 
                 if not username:
                     logger.error("Could not extract username")

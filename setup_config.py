@@ -71,17 +71,22 @@ async def fetch_following_accounts() -> list:
 
     try:
         # Import here to avoid dependency issues
+        import sys
+        import logging
         from scraper.x_scraper import XScraper
         from storage.db import Database
+
+        # Enable logging to see what's happening
+        logging.basicConfig(level=logging.INFO)
 
         # Create temporary database
         db = Database(':memory:')
 
-        # Create scraper with CDP mode
+        # Create scraper with CDP mode (no browser_data_path needed)
         scraper = XScraper(
             db=db,
             headless=False,
-            browser_data_path=str(Path.home() / 'chrome-xdigest'),
+            browser_data_path=None,
             use_cdp=True,
         )
 
