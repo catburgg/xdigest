@@ -14,6 +14,7 @@ Usage:
 import os
 import sys
 import keyring
+import asyncio
 from pathlib import Path
 
 
@@ -53,6 +54,57 @@ def get_multiline_input(prompt: str) -> str:
     return ','.join(accounts)
 
 
+async def fetch_following_accounts() -> list:
+    """Fetch all following accounts from X using CDP mode."""
+    print("\n--- Fetching Your Following List from X ---")
+    print("This will open Chrome and scrape your following list.")
+    print("Make sure Chrome is running with debugging port 9222.")
+    print("\nIf Chrome is not running, open a new terminal and run:")
+    print('/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome \\')
+    print('  --remote-debugging-port=9222 \\')
+    print('  --user-data-dir="$HOME/chrome-xdigest"')
+
+    proceed = input("\nIs Chrome running with debugging? (y/n): ").strip().lower()
+    if proceed != 'y':
+        print("Please start Chrome first, then run this script again.")
+        return []
+
+    try:
+        # Import here to avoid dependency issues
+        from scraper.x_scraper import XScraper
+        from storage.db import Database
+
+        # Create temporary database
+        db = Database(':memory:')
+
+        # Create scraper with CDP mode
+        scraper = XScraper(
+            db=db,
+            headless=False,
+            browser_data_path=str(Path.home() / 'chrome-xdigest'),
+            use_cdp=True,
+        )
+
+        print("\nFetching following list... This may take a minute.")
+        following = await scraper.get_following_accounts()
+
+        if following:
+            print(f"\n✓ Found {len(following)} accounts you're following:")
+            for i, account in enumerate(following[:10], 1):
+                print(f"  {i}. @{account}")
+            if len(following) > 10:
+                print(f"  ... and {len(following) - 10} more")
+        else:
+            print("\n✗ Could not fetch following list. You may need to log in first.")
+
+        return following
+
+    except Exception as e:
+        print(f"\n✗ Error fetching following list: {e}")
+        print("You can manually enter accounts instead.")
+        return []
+
+
 def main():
     print("=" * 60)
     print("XDigest Configuration Setup")
@@ -75,7 +127,9 @@ def main():
 
     print("\n--- SMTP Password ---")
     print("For Gmail, use an App Password (not your regular password):")
-    print("https://support.google.com/accounts/answer/185833")
+    print("  https://support.google.com/accounts/answer/185833")
+    print("For QQ Mail, use Authorization Code:")
+    print("  Settings → Account → Generate Authorization Code")
     smtp_password = get_input("SMTP password (will be stored in Keychain)")
 
     print("\n--- Gemini API Key ---")
@@ -83,7 +137,29 @@ def main():
     gemini_api_key = get_input("Gemini API key (will be stored in Keychain)")
 
     print("\n--- X (Twitter) Accounts to Follow ---")
-    follow_accounts = get_multiline_input("Enter accounts to follow")
+    print("Choose how to add accounts:")
+    print("  1. Automatically load from your X following list (recommended)")
+    print("  2. Manually enter account names")
+
+    choice = get_input("Enter choice (1 or 2)", default="1")
+
+    if choice == "1":
+        # Try to fetch following accounts
+        following = asyncio.run(fetch_following_accounts())
+        if following:
+            print(f"\nLoaded {len(following)} accounts from your following list.")
+            use_all = get_input("Use all these accounts? (y/n)", default="y")
+            if use_all.lower() == 'y':
+                follow_accounts = ','.join(following)
+            else:
+                print("\nYou can manually select which accounts to include.")
+                follow_accounts = get_multiline_input("Enter accounts to follow")
+        else:
+            print("\nFalling back to manual entry.")
+            follow_accounts = get_multiline_input("Enter accounts to follow")
+    else:
+        follow_accounts = get_multiline_input("Enter accounts to follow")
+
     config['FOLLOW_ACCOUNTS'] = follow_accounts
 
     print("\n--- Optional Settings ---")

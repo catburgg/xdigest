@@ -509,3 +509,84 @@ class XScraper:
         except Exception:
             pass
         return None
+
+    async def get_following_accounts(self) -> List[str]:
+        """Fetch list of accounts the user is following.
+
+        Returns:
+            List of account usernames (without @)
+        """
+        following = []
+
+        async with async_playwright() as p:
+            try:
+                page = await self._launch_browser(p, headless=False)
+
+                # Navigate to following page
+                # We need to get the current user's username first
+                await page.goto(HOME_URL, wait_until='networkidle', timeout=30000)
+                await asyncio.sleep(2)
+
+                # Try to find the user's profile link
+                profile_link = await page.query_selector('a[data-testid="AppTabBar_Profile_Link"]')
+                if not profile_link:
+                    logger.error("Could not find profile link. Make sure you're logged in.")
+                    return []
+
+                # Get username from profile link
+                href = await profile_link.get_attribute('href')
+                username = href.strip('/') if href else None
+
+                if not username:
+                    logger.error("Could not extract username")
+                    return []
+
+                # Navigate to following page
+                following_url = f"{X_BASE_URL}/{username}/following"
+                logger.info(f"Navigating to {following_url}")
+                await page.goto(following_url, wait_until='networkidle', timeout=30000)
+                await asyncio.sleep(3)
+
+                # Scroll and collect accounts
+                last_count = 0
+                no_change_count = 0
+                max_scrolls = 20
+
+                for scroll in range(max_scrolls):
+                    # Find all account links
+                    account_links = await page.query_selector_all('a[href^="/"][role="link"]')
+
+                    for link in account_links:
+                        href = await link.get_attribute('href')
+                        if href and href.startswith('/') and '/' not in href[1:]:
+                            # Simple username link like "/elonmusk"
+                            account = href.strip('/')
+                            if account and account not in following and not account.startswith('i/'):
+                                following.append(account)
+
+                    current_count = len(following)
+                    logger.info(f"Scroll {scroll + 1}/{max_scrolls}: Found {current_count} accounts")
+
+                    # Check if we're still finding new accounts
+                    if current_count == last_count:
+                        no_change_count += 1
+                        if no_change_count >= 3:
+                            logger.info("No new accounts found after 3 scrolls, stopping")
+                            break
+                    else:
+                        no_change_count = 0
+
+                    last_count = current_count
+
+                    # Scroll down
+                    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+                    await asyncio.sleep(2)
+
+                logger.info(f"Found {len(following)} following accounts")
+
+            except Exception as e:
+                logger.error(f"Error fetching following accounts: {e}")
+            finally:
+                await self._close_browser()
+
+        return following
