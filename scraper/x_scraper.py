@@ -565,15 +565,21 @@ class XScraper:
                 last_count = 0
                 no_change_count = 0
                 max_scrolls = 20
+                seen_elements = set()  # Track processed elements to avoid duplicates
 
                 for scroll in range(max_scrolls):
                     # Find all account cells (each following entry)
                     # Use more specific selector to avoid "Who to follow" suggestions
-                    # The main timeline should contain the following list
                     account_elements = await page.query_selector_all('[data-testid="UserCell"]')
 
                     for element in account_elements:
                         try:
+                            # Get element handle to track uniqueness
+                            element_id = id(element)
+                            if element_id in seen_elements:
+                                continue
+                            seen_elements.add(element_id)
+
                             # Check if this is a "Who to follow" suggestion by looking for "Follow" button
                             # Following list entries should have "Following" button, not "Follow"
                             follow_button = await element.query_selector('[data-testid*="follow"]')
@@ -585,20 +591,29 @@ class XScraper:
                                     continue
 
                             # Try to find the username link within the cell
-                            username_link = await element.query_selector('a[href^="/"][role="link"]')
-                            if username_link:
+                            # Look specifically for the profile link (first link in the cell)
+                            username_links = await element.query_selector_all('a[href^="/"][role="link"]')
+                            if username_links and len(username_links) > 0:
+                                # Use the first link which should be the profile link
+                                username_link = username_links[0]
                                 href = await username_link.get_attribute('href')
                                 if href and href.startswith('/'):
                                     # Extract username from href like "/username"
                                     account = href.strip('/').split('/')[0]
-                                    # Filter out non-username paths
+                                    # Filter out:
+                                    # - Self (current user)
+                                    # - Non-username paths
+                                    # - Already added accounts
                                     if (account and
+                                        account != username and  # Filter out self
                                         account not in following and
                                         not account.startswith('i/') and
                                         not account.startswith('search') and
                                         not account.startswith('explore') and
                                         not account.startswith('notifications') and
-                                        not account.startswith('messages')):
+                                        not account.startswith('messages') and
+                                        not account.startswith('compose') and
+                                        not account.startswith('settings')):
                                         following.append(account)
                                         logger.debug(f"Found following account: @{account}")
                         except Exception as e:
