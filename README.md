@@ -4,12 +4,14 @@ Automated X (Twitter) news aggregation app that scrapes posts from specific acco
 
 ## Features
 
-- 🤖 **Automated Scraping**: Uses Playwright to scrape X posts (no API required)
-- 🧠 **AI Summarization**: Google Gemini API for multimodal content summarization
-- 📧 **Email Digests**: Beautiful HTML emails sent at 7 AM and 7 PM daily
+- 🤖 **Automated Scraping**: Uses Playwright with CDP mode to scrape X posts (bypasses bot detection)
+- 🧠 **AI Summarization**: Google Gemini 3 Flash for fast, accurate content summarization
+- 🇨🇳 **Chinese Translation**: All summaries automatically translated to Chinese
+- 📧 **Email Digests**: Beautiful HTML emails with summaries and key themes
 - 🔒 **Secure**: Credentials stored in macOS Keychain
-- 📊 **Smart Tracking**: Only includes new posts since last digest
+- ⏰ **12-Hour Window**: Fetches posts from last 12 hours
 - 🎯 **Content Enrichment**: Fetches and summarizes linked articles and videos
+- ⚙️ **One-Time Setup**: Interactive configuration script for easy setup
 
 ## Architecture
 
@@ -27,12 +29,12 @@ xdigest/
 ## Tech Stack
 
 - **Python 3.13** via miniconda
-- **Playwright** + playwright-stealth for X scraping
-- **Google Gemini API** (gemini-2.0-flash) for summarization
+- **Playwright** + playwright-stealth for X scraping with CDP mode
+- **Google Gemini API** (gemini-3-flash-preview) for summarization
 - **trafilatura** + newspaper3k for article extraction
 - **yt-dlp** + youtube-transcript-api for video processing
 - **SQLite** for state management
-- **macOS launchd** for scheduling
+- **macOS launchd** for scheduling (optional)
 
 ## Installation
 
@@ -64,70 +66,55 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 4. Configure Environment
+### 4. One-Time Configuration
+
+Run the interactive setup script to configure everything at once:
 
 ```bash
-cp .env.example .env
+python setup_config.py
 ```
 
-Edit `.env` with your settings:
+This will prompt you for:
+- **Email settings** (sender, recipient, SMTP server)
+- **SMTP password** (Gmail App Password - [get one here](https://support.google.com/accounts/answer/185833))
+- **Gemini API key** ([get one free here](https://aistudio.google.com/app/apikey))
+- **X accounts to follow** (comma-separated usernames)
+- **Optional settings** (paths, headless mode, etc.)
+
+All sensitive data (passwords, API keys) are stored securely in macOS Keychain.
+
+### 5. Initial X Login (CDP Mode)
+
+XDigest uses Chrome DevTools Protocol to avoid X's bot detection:
 
 ```bash
-# X Accounts to follow (comma-separated, no spaces)
-FOLLOW_ACCOUNTS=OpenAI,AnthropicAI,xAI,a16z,ycombinator,karpathy
+# Terminal 1: Launch Chrome with debugging
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/chrome-xdigest"
 
-# Email Configuration
-EMAIL_TO=your-email@gmail.com
-EMAIL_FROM=your-email@gmail.com
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
+# Log into X in that Chrome window
 
-# Scraping Configuration
-HEADLESS=true
-SCROLL_PAUSE=2
-MAX_SCROLLS=10
+# Terminal 2: Run XDigest
+conda activate xdigest
+python main.py --use-chrome
 ```
 
-### 5. Set Up Credentials
-
-Run the setup script to store sensitive credentials in macOS Keychain:
+### 6. Test Run
 
 ```bash
-python setup_credentials.py
-```
-
-You'll be prompted for:
-- **X username** (your X/Twitter username)
-- **X password** (your X/Twitter password)
-- **Google Gemini API key** (from Google AI Studio)
-- **SMTP password** (Gmail App Password, NOT your regular Gmail password)
-
-### 6. Initial X Login
-
-XDigest needs to log into X once to save session cookies:
-
-```bash
-python main.py --login
-```
-
-A browser window will open. Complete the login manually (including any CAPTCHA or 2FA). Once logged in, close the browser. Session cookies are now saved for future headless runs.
-
-### 7. Test Run
-
-```bash
-python main.py
+python main.py --use-chrome
 ```
 
 This will:
-1. Scrape posts from your followed accounts
+1. Scrape posts from last 12 hours from your followed accounts
 2. Fetch and process linked articles/videos
-3. Generate summaries with Gemini
+3. Generate Chinese summaries with Gemini
 4. Send an email digest to your configured address
 
 Check your email (and spam folder) for the digest!
 
-### 8. Install Scheduler (Optional)
+### 7. Install Scheduler (Optional)
 
 To run automatically at 7 AM and 7 PM daily:
 
