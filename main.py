@@ -178,7 +178,7 @@ async def run_digest(settings, db, logger, use_cdp=False):
     )
 
     if success:
-        logger.info(f"Email digest sent successfully to {settings.to_email}")
+        logger.info(f"Email digest sent successfully to {settings.email_to}")
         # Update last sent timestamp for tracking
         db.set_last_sent_timestamp(datetime.now())
 
