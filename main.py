@@ -166,10 +166,10 @@ async def run_digest(settings, db, logger, use_cdp=False):
     email_sender = EmailSender(
         smtp_host=settings.smtp_host,
         smtp_port=settings.smtp_port,
-        smtp_user=settings.smtp_user,
+        smtp_user=settings.email_from,  # Use email_from as SMTP user
         smtp_password=settings.smtp_password,
-        from_email=settings.from_email,
-        to_email=settings.to_email,
+        from_email=settings.email_from,
+        to_email=settings.email_to,
     )
 
     success = email_sender.send_digest(

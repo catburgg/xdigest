@@ -16,7 +16,7 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = 'gemini-1.5-flash'  # Updated to available model
+MODEL_NAME = 'models/gemini-1.5-flash'  # Full model path required
 API_DELAY = 1  # seconds between API calls (courtesy rate limiting)
 
 POST_SUMMARY_PROMPT = """Summarize this social media post and any linked content into 2-3 concise sentences.
