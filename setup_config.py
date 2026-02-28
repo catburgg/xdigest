@@ -173,6 +173,7 @@ def main():
     config['FOLLOW_ACCOUNTS'] = follow_accounts
 
     print("\n--- Optional Settings ---")
+    config['POST_HOURS_WINDOW'] = get_input("Time window for fetching posts (hours)", default="12", required=False)
     config['HEADLESS'] = get_input("Run browser in headless mode? (true/false)", default="true", required=False)
     config['DB_PATH'] = get_input("Database path", default="~/.xdigest/xdigest.db", required=False)
     config['LOG_PATH'] = get_input("Log directory", default="~/.xdigest/logs/", required=False)
