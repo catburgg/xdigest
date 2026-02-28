@@ -68,39 +68,30 @@ playwright install chromium
 
 ### 4. One-Time Configuration
 
-**Option A: Automated Setup (Recommended)**
+Run the interactive setup script:
 
 ```bash
 python setup_config.py
 ```
 
-When prompted for X accounts, **choose option 2 (manual entry)** for first-time setup. You can auto-fetch your following list later after Chrome CDP is set up.
+This will prompt you for:
+- **X (Twitter) credentials** (username and password)
+- **Email settings** (sender, recipient, SMTP server)
+- **SMTP password** (Gmail App Password or QQ Mail Authorization Code)
+- **Gemini API key** ([get one free here](https://aistudio.google.com/app/apikey))
+- **X accounts to follow** (auto-fetch or manual entry)
+- **Optional settings** (paths, headless mode, time window, etc.)
 
-This will:
+The script will:
 - ✓ Create `.env` file with your configuration
-- ✓ Store API keys and passwords securely in macOS Keychain
+- ✓ Store all credentials securely in macOS Keychain
 - ✓ Create necessary directories (`~/.xdigest/`)
 
-**Option B: Manual Setup**
-
-If the automated setup doesn't work:
-
-```bash
-# 1. Copy example config
-cp .env.example .env
-
-# 2. Edit with your settings
-nano .env
-
-# 3. Store credentials in keychain
-python setup_credentials.py
-```
+**Tip:** For first-time setup, choose option 2 (manual entry) when asked about X accounts. You can auto-fetch your following list later after Chrome CDP is set up.
 
 ### 5. Initial X Login (CDP Mode)
 
 XDigest uses Chrome DevTools Protocol to avoid X's bot detection.
-
-**IMPORTANT:** Make sure you've completed step 4 (configuration) before proceeding. If you used Option B (manual setup), ensure you've run `setup_credentials.py` to store your API keys in the keychain.
 
 ```bash
 # Terminal 1: Launch Chrome with debugging

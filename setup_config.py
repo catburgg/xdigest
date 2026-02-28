@@ -130,6 +130,11 @@ def main():
     config['SMTP_HOST'] = get_input("SMTP server", default="smtp.gmail.com")
     config['SMTP_PORT'] = get_input("SMTP port", default="587")
 
+    print("\n--- X (Twitter) Credentials ---")
+    print("Your X username and password will be stored securely in Keychain.")
+    x_username = get_input("X (Twitter) username")
+    x_password = get_input("X (Twitter) password (will be stored in Keychain)")
+
     print("\n--- SMTP Password ---")
     print("For Gmail, use an App Password (not your regular password):")
     print("  https://support.google.com/accounts/answer/185833")
@@ -187,6 +192,12 @@ def main():
     # Store secrets in Keychain
     print("\n--- Storing Secrets in Keychain ---")
     try:
+        keyring.set_password('xdigest', 'x_username', x_username)
+        print("✓ X username stored in Keychain")
+
+        keyring.set_password('xdigest', 'x_password', x_password)
+        print("✓ X password stored in Keychain")
+
         keyring.set_password('xdigest', 'smtp_password', smtp_password)
         print("✓ SMTP password stored in Keychain")
 

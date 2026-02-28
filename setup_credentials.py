@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Setup script to store credentials in macOS Keychain.
 
-Run this once to securely store sensitive credentials.
+DEPRECATED: Use setup_config.py instead, which handles both configuration
+and credentials in one step.
+
+This script is kept for backward compatibility and for updating credentials
+without re-running the full setup.
 """
 
 import keyring
@@ -12,7 +16,9 @@ def main():
     """Prompt user for credentials and store in Keychain."""
     print("XDigest Credential Setup")
     print("=" * 50)
-    print("\nThis script will store your credentials securely in macOS Keychain.")
+    print("\n⚠️  DEPRECATED: Consider using 'python setup_config.py' instead.")
+    print("This script only updates credentials, not the full configuration.\n")
+    print("This script will store your credentials securely in macOS Keychain.")
     print("Credentials will never be stored in code or git.\n")
 
     # X Credentials
