@@ -36,6 +36,7 @@ class Settings:
         # Scraping Configuration
         self.headless = os.getenv('HEADLESS', 'true').lower() == 'true'
         self.max_posts_per_account = int(os.getenv('MAX_POSTS_PER_ACCOUNT', '50'))
+        self.post_hours_window = int(os.getenv('POST_HOURS_WINDOW', '12'))
 
         # Create directories if they don't exist
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

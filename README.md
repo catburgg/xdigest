@@ -9,7 +9,7 @@ Automated X (Twitter) news aggregation app that scrapes posts from specific acco
 - 🇨🇳 **Chinese Translation**: All summaries automatically translated to Chinese
 - 📧 **Email Digests**: Beautiful HTML emails with summaries and key themes
 - 🔒 **Secure**: Credentials stored in macOS Keychain
-- ⏰ **12-Hour Window**: Fetches posts from last 12 hours
+- ⏰ **Configurable Time Window**: Fetch posts from last N hours (default: 12)
 - 🎯 **Content Enrichment**: Fetches and summarizes linked articles and videos
 - ⚙️ **One-Time Setup**: Interactive configuration script for easy setup
 
@@ -68,30 +68,39 @@ playwright install chromium
 
 ### 4. One-Time Configuration
 
-**IMPORTANT:** Run the interactive setup script to configure everything. This script will **create your `.env` file** and store credentials in macOS Keychain.
-
-**Do NOT manually copy `.env.example` to `.env`** - the setup script does this for you.
+**Option A: Automated Setup (Recommended)**
 
 ```bash
 python setup_config.py
 ```
 
-This will prompt you for:
-- **Email settings** (sender, recipient, SMTP server)
-- **SMTP password** (Gmail App Password - [get one here](https://support.google.com/accounts/answer/185833))
-- **Gemini API key** ([get one free here](https://aistudio.google.com/app/apikey))
-- **X accounts to follow** (comma-separated usernames)
-- **Optional settings** (paths, headless mode, etc.)
+When prompted for X accounts, **choose option 2 (manual entry)** for first-time setup. You can auto-fetch your following list later after Chrome CDP is set up.
 
-The script will:
+This will:
 - ✓ Create `.env` file with your configuration
 - ✓ Store API keys and passwords securely in macOS Keychain
 - ✓ Create necessary directories (`~/.xdigest/`)
-- ✓ Optionally fetch your X following list automatically
+
+**Option B: Manual Setup**
+
+If the automated setup doesn't work:
+
+```bash
+# 1. Copy example config
+cp .env.example .env
+
+# 2. Edit with your settings
+nano .env
+
+# 3. Store credentials in keychain
+python setup_credentials.py
+```
 
 ### 5. Initial X Login (CDP Mode)
 
-XDigest uses Chrome DevTools Protocol to avoid X's bot detection:
+XDigest uses Chrome DevTools Protocol to avoid X's bot detection.
+
+**IMPORTANT:** Make sure you've completed step 4 (configuration) before proceeding. If you used Option B (manual setup), ensure you've run `setup_credentials.py` to store your API keys in the keychain.
 
 ```bash
 # Terminal 1: Launch Chrome with debugging
@@ -113,7 +122,7 @@ python main.py --use-chrome
 ```
 
 This will:
-1. Scrape posts from last 12 hours from your followed accounts
+1. Scrape posts from the configured time window (default: 12 hours) from your followed accounts
 2. Fetch and process linked articles/videos
 3. Generate Chinese summaries with Gemini
 4. Send an email digest to your configured address
@@ -144,6 +153,18 @@ To uninstall:
 **Important:** Make sure Chrome with CDP mode is running before the scheduled time, or the script will fail to scrape posts.
 
 ## Configuration
+
+### Time Window
+
+Configure how many hours of posts to fetch in `.env`:
+
+```
+POST_HOURS_WINDOW=12
+```
+
+- Default: 12 hours
+- Recommended: 12-24 hours (ensures you don't miss content if you skip an email)
+- Higher values = more posts but longer processing time
 
 ### Followed Accounts
 

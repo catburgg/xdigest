@@ -58,10 +58,10 @@ async def run_login(settings, db, use_cdp=False):
 
 async def run_digest(settings, db, logger, use_cdp=False):
     """Run the full digest pipeline."""
-    # Always fetch posts from last 12 hours (not incremental)
+    # Fetch posts from configurable time window (default 12 hours)
     # This ensures users don't miss content if they skip an email
-    since = datetime.now(timezone.utc) - timedelta(hours=12)
-    logger.info(f"Fetching posts from last 12 hours (since {since})")
+    since = datetime.now(timezone.utc) - timedelta(hours=settings.post_hours_window)
+    logger.info(f"Fetching posts from last {settings.post_hours_window} hours (since {since})")
 
     # Phase 2: Scrape X posts
     scraper = XScraper(
@@ -78,16 +78,6 @@ async def run_digest(settings, db, logger, use_cdp=False):
     if not posts:
         logger.info("No new posts found. Skipping digest.")
         return
-
-    # Create digest record
-    digest_id = db.create_digest(post_count=len(posts))
-    logger.info(f"Created digest record: {digest_id}")
-
-    # Store posts in database
-    for post in posts:
-        post_dict = post.to_dict()
-        post_dict['digest_id'] = digest_id
-        db.add_post(post_dict)
 
     # Phase 3: Enrich content (articles and videos)
     logger.info("Enriching content...")
@@ -181,11 +171,6 @@ async def run_digest(settings, db, logger, use_cdp=False):
         logger.info(f"Email digest sent successfully to {settings.email_to}")
         # Update last sent timestamp for tracking
         db.set_last_sent_timestamp(datetime.now())
-
-        # Clean up all old data (we don't need it for deduplication anymore)
-        deleted_posts = db.cleanup_old_posts(keep_days=0)  # Delete all posts
-        deleted_digests = db.cleanup_old_digests(keep_count=5)  # Keep only last 5 for history
-        logger.info(f"Cleaned up {deleted_posts} posts and {deleted_digests} old digests")
     else:
         logger.error("Failed to send email digest")
         return
