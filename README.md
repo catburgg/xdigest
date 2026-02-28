@@ -68,7 +68,9 @@ playwright install chromium
 
 ### 4. One-Time Configuration
 
-Run the interactive setup script to configure everything at once:
+**IMPORTANT:** Run the interactive setup script to configure everything. This script will **create your `.env` file** and store credentials in macOS Keychain.
+
+**Do NOT manually copy `.env.example` to `.env`** - the setup script does this for you.
 
 ```bash
 python setup_config.py
@@ -81,7 +83,11 @@ This will prompt you for:
 - **X accounts to follow** (comma-separated usernames)
 - **Optional settings** (paths, headless mode, etc.)
 
-All sensitive data (passwords, API keys) are stored securely in macOS Keychain.
+The script will:
+- ✓ Create `.env` file with your configuration
+- ✓ Store API keys and passwords securely in macOS Keychain
+- ✓ Create necessary directories (`~/.xdigest/`)
+- ✓ Optionally fetch your X following list automatically
 
 ### 5. Initial X Login (CDP Mode)
 
